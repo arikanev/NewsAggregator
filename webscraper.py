@@ -5,6 +5,21 @@ from transformers import pipeline
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
 import numpy as np
+import json
+import pandas as pd
+import re 
+
+import nltk 
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+from nltk.corpus import stopwords
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
+
+from sklearn.metrics import classification_report
+import time
 
 BASE_URL = "https://www.bbc.com"
 NEWS_URL = "https://www.bbc.com/news"
@@ -75,6 +90,88 @@ def summarize_text(text_input):
     return summarizer(text_input)[0]['summary_text']
 
 
+# Text preprocessing
+def preprocess(text):
+    
+    """
+    Function: split text into words and return the root form of the words
+    Args:
+      text(str): the article
+    Return:
+      lem(list of str): a list of the root form of the article words
+    """
+        
+    # Normalize text
+    text = re.sub(r"[^a-zA-Z]", " ", str(text).lower())
+    
+    # Tokenize text
+    token = word_tokenize(text)
+    
+    # Remove stop words
+    stop = stopwords.words("english")
+    words = [t for t in token if t not in stop]
+    
+    # Lemmatization
+    lem = [WordNetLemmatizer().lemmatize(w) for w in words]
+    
+    return lem
+
+def fit_eval_model(model, train_features, y_train, test_features, y_test):
+    
+    """
+    Function: train and evaluate a machine learning classifier.
+    Args:
+      model: machine learning classifier
+      train_features: train data extracted features
+      y_train: train data lables
+      test_features: train data extracted features
+      y_test: train data lables
+    Return:
+      results(dictionary): a dictionary of the model training time and classification report
+    """
+    results ={}
+    
+    # Start time
+    start = time.time()
+    # Train the model
+    model.fit(train_features, y_train)
+    # End time
+    end = time.time()
+    # Calculate the training time
+    results['train_time'] = end - start
+    
+    # Test the model
+    test_predicted = model.predict(test_features)
+    
+     # Classification report
+    results['classification_report'] = classification_report(y_test, test_predicted)
+        
+    return results
+
+# Classify an article
+def classify_article(content):
+    
+    """
+    Function: classify an article.
+    Args:
+      path: the path of the article 
+    Return:
+      category (str): the category of the article
+    """
+
+    # Text preprocessing
+    artcl = preprocess(content)
+    artcl = ' '.join(artcl)
+
+    # Use TF_IDF
+    test = tf_vec.transform([artcl])
+
+    # Use MultinomialNB model to classify the article
+    predict = nb.predict(test)
+    category = predict[0]
+
+    return category
+
 
 if __name__ == "__main__":
     url = 'https://www.bbc.com/news/world-africa-65284945'
@@ -93,6 +190,8 @@ if __name__ == "__main__":
 
     index_to_title = {}
 
+    articles = []
+
     for idx, (title, link) in enumerate(headlines_and_links):
 
         embedding2 = model.encode(title)
@@ -101,14 +200,44 @@ if __name__ == "__main__":
 
         title_embeddings.append(embedding2)
 
+        article = get_article_details(link)
+
+        article_dict = {}
+
+        if article:
+            print(f"Scraped: {article['headline']}")
+            article_dict.update({"title":title, "content":article['content']})
+            articles.append(article_dict)
+
     cosines = cosine_similarity(np.expand_dims(np.array(embedding1),axis=0), np.array(title_embeddings))[0]
 
     print(article_to_check_title,"IS SIMILAR TO", index_to_title[np.argmax(cosines)])
 
-        # article = get_article_details(link)
-        # if article:
-        #    articles.append(article)
-        #    print(f"Scraped: {article['headline']}")
+    json_obj = json.dumps(articles)
+    # print(json_obj)
+
+    df1 = pd.read_csv('BBC News Train.csv')
+    category = list(df1['Category'].unique())
+    print(category)
+
+    df1["Preprocessed_Text"] = df1['Text'].apply(lambda x: preprocess(x))
+    df1['Preprocessed_Text2'] = df1['Preprocessed_Text'].apply(' '.join)
+    X = df1['Preprocessed_Text2']
+    y = df1['Category']
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2)
+
+    tf_vec = TfidfVectorizer()
+    train_features = tf_vec.fit(X_train)
+    train_features = tf_vec.transform(X_train)
+    test_features = tf_vec.transform(X_test)
+
+    nb = MultinomialNB()
+
+    results = fit_eval_model(nb, train_features, y_train, test_features, y_test)
+
+    print(articles[0]['title'] + "is in category:" + classify_article(articles[0]['content']))
+
 
 # You can now analyze the content of the articles
 # The 'articles' variable is a list of dictionaries containing the headline, link, publication_date, and content of each article
