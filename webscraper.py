@@ -1,3 +1,4 @@
+import nltk
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -7,7 +8,7 @@ from sentence_transformers import SentenceTransformer
 import numpy as np
 import json
 import pandas as pd
-import re 
+import re
 import openai
 
 from nltk.tokenize import word_tokenize
@@ -24,19 +25,22 @@ import time
 BASE_URL = "https://www.bbc.com"
 NEWS_URL = "https://www.bbc.com/news"
 
+
 def get_article_title(url):
-    
+
     response = requests.get(url)
 
     soup = BeautifulSoup(response.text, "html.parser")
 
     return [title.get_text() for title in soup.find_all('title')]
 
+
 def get_headlines_and_links(url):
     response = requests.get(url)
 
     if response.status_code != 200:
-        print(f"Failed to fetch the BBC News website. Status code: {response.status_code}")
+        print(
+            f"Failed to fetch the BBC News website. Status code: {response.status_code}")
         return []
 
     soup = BeautifulSoup(response.text, "html.parser")
@@ -51,10 +55,12 @@ def get_headlines_and_links(url):
 
     return headlines_and_links
 
+
 def get_article_details(url):
     response = requests.get(url)
     if response.status_code != 200:
-        print(f"Failed to fetch the article URL ({url}). Status code: {response.status_code}")
+        print(
+            f"Failed to fetch the article URL ({url}). Status code: {response.status_code}")
         return None
 
     soup = BeautifulSoup(response.text, "html.parser")
@@ -92,7 +98,6 @@ def summarize_text(text_input):
 
 # Text preprocessing
 def preprocess(text):
-    
     """
     Function: split text into words and return the root form of the words
     Args:
@@ -100,24 +105,24 @@ def preprocess(text):
     Return:
       lem(list of str): a list of the root form of the article words
     """
-        
+
     # Normalize text
     text = re.sub(r"[^a-zA-Z]", " ", str(text).lower())
-    
+
     # Tokenize text
     token = word_tokenize(text)
-    
+
     # Remove stop words
     stop = stopwords.words("english")
     words = [t for t in token if t not in stop]
-    
+
     # Lemmatization
     lem = [WordNetLemmatizer().lemmatize(w) for w in words]
-    
+
     return lem
 
+
 def fit_eval_model(model, train_features, y_train, test_features, y_test):
-    
     """
     Function: train and evaluate a machine learning classifier.
     Args:
@@ -129,8 +134,8 @@ def fit_eval_model(model, train_features, y_train, test_features, y_test):
     Return:
       results(dictionary): a dictionary of the model training time and classification report
     """
-    results ={}
-    
+    results = {}
+
     # Start time
     start = time.time()
     # Train the model
@@ -139,18 +144,20 @@ def fit_eval_model(model, train_features, y_train, test_features, y_test):
     end = time.time()
     # Calculate the training time
     results['train_time'] = end - start
-    
+
     # Test the model
     test_predicted = model.predict(test_features)
-    
-     # Classification report
-    results['classification_report'] = classification_report(y_test, test_predicted)
-        
+
+    # Classification report
+    results['classification_report'] = classification_report(
+        y_test, test_predicted)
+
     return results
 
 # Classify an article
+
+
 def classify_article(tf_vec, nb, content):
-    
     """
     Function: classify an article.
     Args:
@@ -172,9 +179,9 @@ def classify_article(tf_vec, nb, content):
 
     return category
 
-def run_GPT4(string):
-    openai.api_key = "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"
 
+def run_GPT4(string):
+    openai.api_key = "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"
 
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -187,7 +194,7 @@ def run_GPT4(string):
 
 
 def run(url):
-    url = 'https://www.bbc.com/news/world-africa-65284945'
+    # url = 'https://www.bbc.com/news/world-africa-65284945'
 
     # print(get_article_title("https://www.bbc.com/news/world-africa-65284945"))
     headlines_and_links = get_headlines_and_links("https://www.bbc.com/news")
@@ -220,15 +227,22 @@ def run(url):
         article_dict = {}
 
         if article:
-            article_dict.update({"title":title, "content":article['content']})
+            article_dict.update(
+                {"title": title, "content": article['content']})
             articles.append(article_dict)
             index_to_article.update({idx: article['content']})
 
-    cosines = cosine_similarity(np.expand_dims(np.array(embedding1),axis=0), np.array(title_embeddings))[0]
+    cosines = cosine_similarity(np.expand_dims(
+        np.array(embedding1), axis=0), np.array(title_embeddings))[0]
 
-    similar_article_indices = np.argpartition(cosines, -3)[-3:]
+    print(cosines)
 
-    print(article_to_check_title,"IS SIMILAR TO", [index_to_title[i] for i in similar_article_indices])
+    similar_article_indices = list(np.nonzero(cosines > 0.8)[0])
+
+    print(similar_article_indices)
+
+    print(article_to_check_title, "IS SIMILAR TO", [
+          index_to_title[i] for i in similar_article_indices])
 
     # print(json_obj)
 
@@ -241,7 +255,7 @@ def run(url):
     X = df1['Preprocessed_Text2']
     y = df1['Category']
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
 
     tf_vec = TfidfVectorizer()
     train_features = tf_vec.fit(X_train)
@@ -250,18 +264,22 @@ def run(url):
 
     nb = MultinomialNB()
 
-    results = fit_eval_model(nb, train_features, y_train, test_features, y_test)
+    results = fit_eval_model(
+        nb, train_features, y_train, test_features, y_test)
 
-    print(articles[2]['title'] + "is in category:" + classify_article(tf_vec, nb, articles[2]['content']))
+    print(articles[2]['title'] + "is in category:" +
+          classify_article(tf_vec, nb, articles[2]['content']))
 
     to_summarize = ""
 
     for i in similar_article_indices:
+        print(index_to_title[i])
         to_summarize += run_GPT4(index_to_article[i])
 
     summary = run_GPT4(to_summarize)
 
     for article in articles:
+        article.update({"title": article_to_check_title})
         article.update({"summary": summary})
         article.update({"content": ""})
 
@@ -272,4 +290,3 @@ def run(url):
 
 # You can now analyze the content of the articles
 # The 'articles' variable is a list of dictionaries containing the headline, link, publication_date, and content of each article
-

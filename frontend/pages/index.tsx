@@ -5,6 +5,17 @@ import Head from 'next/head';
 import { format } from 'date-fns';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from '@/components/ui/alert-dialog';
 import ArticleCard from '@/components/ArticleCard';
 import { Button } from '@/components/ui/button';
 
@@ -16,17 +27,23 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<boolean>(false);
 
+  const [title, setTitle] = useState<string>('');
+  const [summary, setSummary] = useState<string>('');
+
   const getSummary = async () => {
     console.log(url);
     setLoading(true);
     try {
-      const res = await fetch(`https://9369-157-242-208-112.ngrok-free.app/summarize?url=${url}`, {
+      const res = await fetch(`http://localhost:5002/summarize?url=${url}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
       const json = await res.json();
 
       console.log(json);
+      setLoading(false);
+      setTitle(json.title);
+      setSummary(json.summary);
     } catch {
       setLoading(false);
       setError(true);
@@ -56,9 +73,29 @@ export default function Home() {
           <span className="sr-only">Loading... this may take a minute</span>
         </div>
         <h3 className="m-3 scroll-m-20 text-xl text-blue-500 font-normal tracking-tight">
-          Loading...
+          Aggregating sources...
         </h3>
       </div>
+    );
+  };
+
+  const SummaryDialog = () => {
+    return (
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button className="bg-blue-500">Open</Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl">{title}</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">{summary}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Back</AlertDialogCancel>
+            <AlertDialogAction>Thanks!</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     );
   };
 
@@ -67,7 +104,7 @@ export default function Home() {
       <Head>
         <title>News Aggregator</title>
       </Head>
-      <div className="sticky top-0 bg-white z-40 w-full max-w-5xl items-center justify-between font-sans text-sm flex pt-4 md:pt-8 pb-4">
+      <div className="sticky top-0 backdrop-blur-md z-40 w-full max-w-5xl items-center justify-between font-sans text-sm flex pt-4 md:pt-8 pb-4">
         <div className="flex flex-row gap-2 items-center text-lg font-semibold">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -107,6 +144,23 @@ export default function Home() {
           </h2>
           {loading ? (
             <Loading />
+          ) : summary && title ? (
+            <div className="flex items-center gap-2 mt-3">
+              <h3 className="m-3 scroll-m-20 text-xl text-blue-500 font-normal tracking-tight">
+                Your summary is ready!
+              </h3>
+              <SummaryDialog />
+              <Button
+                onClick={() => {
+                  setLoading(false);
+                  setTitle('');
+                  setSummary('');
+                }}
+                variant="outline"
+              >
+                Back
+              </Button>
+            </div>
           ) : (
             <div className="mt-3 w-full flex gap-2 items-center">
               <Input
