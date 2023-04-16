@@ -181,7 +181,7 @@ def classify_article(tf_vec, nb, content):
 
 
 def run_GPT4(string):
-    openai.api_key = "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"
+    openai.api_key = ""
 
     completion = openai.ChatCompletion.create(
         model="gpt-3.5-turbo",
@@ -271,10 +271,10 @@ def run(url):
           classify_article(tf_vec, nb, articles[2]['content']))
 
     to_summarize = ""
-
-    for i in similar_article_indices:
-        print(index_to_title[i])
-        to_summarize += run_GPT4(index_to_article[i])
+    if similar_article_indices is not None:
+        for i in similar_article_indices:
+            print(index_to_title[i])
+            to_summarize += run_GPT4(index_to_article[i])
 
     summary = run_GPT4(to_summarize)
 
