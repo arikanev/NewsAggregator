@@ -1,5 +1,7 @@
 # NewsAggregator
 
+Stay informed, stay ahead: Your one-stop hub for the latest and greatest in current events.
+
 
 
 What was the goal or intended purpose of our project? 
