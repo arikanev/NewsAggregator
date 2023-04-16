@@ -173,7 +173,7 @@ def classify_article(tf_vec, nb, content):
     return category
 
 def run_GPT4(string):
-    openai.api_key = ""
+    openai.api_key = "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"
 
 
     completion = openai.ChatCompletion.create(
@@ -230,7 +230,6 @@ def run(url):
 
     print(article_to_check_title,"IS SIMILAR TO", [index_to_title[i] for i in similar_article_indices])
 
-    json_obj = json.dumps(articles)
     # print(json_obj)
 
     df1 = pd.read_csv('BBC News Train.csv')
@@ -260,7 +259,15 @@ def run(url):
     for i in similar_article_indices:
         to_summarize += run_GPT4(index_to_article[i])
 
-    print(run_GPT4(to_summarize))
+    summary = run_GPT4(to_summarize)
+
+    for article in articles:
+        article.update({"summary": summary})
+        article.update({"content": ""})
+
+    json_obj = json.dumps(articles[0])
+
+    return json_obj
 
 
 # You can now analyze the content of the articles
