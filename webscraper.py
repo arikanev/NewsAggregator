@@ -149,7 +149,7 @@ def fit_eval_model(model, train_features, y_train, test_features, y_test):
     return results
 
 # Classify an article
-def classify_article(content):
+def classify_article(tf_vec, nb, content):
     
     """
     Function: classify an article.
@@ -173,7 +173,7 @@ def classify_article(content):
     return category
 
 def run_GPT4(string):
-    openai.api_key = "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"
+    openai.api_key = ""
 
 
     completion = openai.ChatCompletion.create(
@@ -186,7 +186,7 @@ def run_GPT4(string):
     return output['content']
 
 
-if __name__ == "__main__":
+def run(url):
     url = 'https://www.bbc.com/news/world-africa-65284945'
 
     # print(get_article_title("https://www.bbc.com/news/world-africa-65284945"))
@@ -220,7 +220,6 @@ if __name__ == "__main__":
         article_dict = {}
 
         if article:
-            print(f"Scraped: {article['headline']}")
             article_dict.update({"title":title, "content":article['content']})
             articles.append(article_dict)
             index_to_article.update({idx: article['content']})
@@ -254,7 +253,7 @@ if __name__ == "__main__":
 
     results = fit_eval_model(nb, train_features, y_train, test_features, y_test)
 
-    print(articles[2]['title'] + "is in category:" + classify_article(articles[2]['content']))
+    print(articles[2]['title'] + "is in category:" + classify_article(tf_vec, nb, articles[2]['content']))
 
     to_summarize = ""
 
