@@ -8,8 +8,8 @@ import numpy as np
 import json
 import pandas as pd
 import re 
+import openai
 
-import nltk 
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
 from nltk.corpus import stopwords
@@ -172,6 +172,19 @@ def classify_article(content):
 
     return category
 
+def run_GPT4(string):
+    openai.api_key = "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"
+
+
+    completion = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "assistant", "content": "Summarize: " + string}
+        ]
+    )
+    output = completion.choices[0].message
+    return output['content']
+
 
 if __name__ == "__main__":
     url = 'https://www.bbc.com/news/world-africa-65284945'
@@ -189,6 +202,8 @@ if __name__ == "__main__":
     embedding1 = model.encode(article_to_check_title)
 
     index_to_title = {}
+
+    index_to_article = {}
 
     articles = []
 
@@ -208,10 +223,13 @@ if __name__ == "__main__":
             print(f"Scraped: {article['headline']}")
             article_dict.update({"title":title, "content":article['content']})
             articles.append(article_dict)
+            index_to_article.update({idx: article['content']})
 
     cosines = cosine_similarity(np.expand_dims(np.array(embedding1),axis=0), np.array(title_embeddings))[0]
 
-    print(article_to_check_title,"IS SIMILAR TO", index_to_title[np.argmax(cosines)])
+    similar_article_indices = np.argpartition(cosines, -3)[-3:]
+
+    print(article_to_check_title,"IS SIMILAR TO", [index_to_title[i] for i in similar_article_indices])
 
     json_obj = json.dumps(articles)
     # print(json_obj)
@@ -236,7 +254,14 @@ if __name__ == "__main__":
 
     results = fit_eval_model(nb, train_features, y_train, test_features, y_test)
 
-    print(articles[0]['title'] + "is in category:" + classify_article(articles[0]['content']))
+    print(articles[2]['title'] + "is in category:" + classify_article(articles[2]['content']))
+
+    to_summarize = ""
+
+    for i in similar_article_indices:
+        to_summarize += run_GPT4(index_to_article[i])
+
+    print(run_GPT4(to_summarize))
 
 
 # You can now analyze the content of the articles
